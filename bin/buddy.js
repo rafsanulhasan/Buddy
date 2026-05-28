@@ -61,7 +61,8 @@ program
   .option('--user', 'Install at user level instead of repo level.')
   .option('--force', 'Overwrite an existing buddy.md at the destination.')
   .option('--claude', 'Install for Claude Code only (.claude/agents/).')
-  .option('--all', 'Install for all CLIs (Copilot CLI + Claude Code).')
+  .option('--codex', 'Install for Codex CLI only (AGENTS.md).')
+  .option('--all', 'Install for all CLIs (Copilot CLI + Claude Code + Codex).')
   .action(agentCommand);
 
 program

@@ -1,13 +1,15 @@
 import { existsSync, mkdirSync, copyFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import { agentPromptPath, claudeAgentPromptPath, findRepoRoot } from '../lib/paths.js';
+import { agentPromptPath, claudeAgentPromptPath, codexAgentPromptPath, findRepoRoot } from '../lib/paths.js';
 
 // Install destinations auto-discovered by each CLI:
 //   Copilot CLI repo:  <repoRoot>/.github/agents/buddy.md
 //   Copilot CLI user:  ~/.copilot/agents/buddy.md
 //   Claude Code repo:  <repoRoot>/.claude/agents/buddy.md
 //   Claude Code user:  ~/.claude/agents/buddy.md
+//   Codex CLI repo:    <repoRoot>/AGENTS.md
+//   Codex CLI user:    ~/.codex/AGENTS.md
 
 function destForCopilot(scope, repoRoot) {
   if (scope === 'user') return join(homedir(), '.copilot', 'agents', 'buddy.md');
@@ -17,6 +19,11 @@ function destForCopilot(scope, repoRoot) {
 function destForClaude(scope, repoRoot) {
   if (scope === 'user') return join(homedir(), '.claude', 'agents', 'buddy.md');
   return join(repoRoot, '.claude', 'agents', 'buddy.md');
+}
+
+function destForCodex(scope, repoRoot) {
+  if (scope === 'user') return join(homedir(), '.codex', 'AGENTS.md');
+  return join(repoRoot, 'AGENTS.md');
 }
 
 function installTo(src, dest, force) {
@@ -50,6 +57,12 @@ export function installClaudeAgent({ scope = 'repo', force = false, repoRoot } =
   return installTo(claudeAgentPromptPath(), dest, force);
 }
 
+export function installCodexAgent({ scope = 'repo', force = false, repoRoot } = {}) {
+  const root = repoRoot || findRepoRoot();
+  const dest = destForCodex(scope, root);
+  return installTo(codexAgentPromptPath(), dest, force);
+}
+
 function printInstallResult(result, label) {
   if (result.action === 'already-installed') {
     console.log(`✓ ${label} agent already installed at ${result.dest}`);
@@ -71,6 +84,8 @@ function listAgents(repoRoot) {
     { label: 'Copilot CLI (user)', path: destForCopilot('user', root) },
     { label: 'Claude Code (repo)', path: destForClaude('repo', root) },
     { label: 'Claude Code (user)', path: destForClaude('user', root) },
+    { label: 'Codex CLI   (repo)', path: destForCodex('repo', root) },
+    { label: 'Codex CLI   (user)', path: destForCodex('user', root) },
   ];
   console.log('Buddy agent locations:');
   for (const loc of locations) {
@@ -88,6 +103,7 @@ export async function agentCommand(subcommand, opts = {}) {
   if (sub === 'path') {
     console.log('Copilot CLI agent:', agentPromptPath());
     console.log('Claude Code agent:', claudeAgentPromptPath());
+    console.log('Codex CLI agent:  ', codexAgentPromptPath());
     return;
   }
 
@@ -97,8 +113,10 @@ export async function agentCommand(subcommand, opts = {}) {
   }
 
   if (sub === 'install') {
-    const forClaude = opts.claude || opts.all;
-    const forCopilot = !opts.claude || opts.all;
+    const forAll = opts.all;
+    const forClaude = opts.claude || forAll;
+    const forCodex = opts.codex || forAll;
+    const forCopilot = (!opts.claude && !opts.codex) || forAll;
     let anyFailed = false;
 
     if (forCopilot) {
@@ -113,26 +131,43 @@ export async function agentCommand(subcommand, opts = {}) {
       if (!ok) anyFailed = true;
     }
 
+    if (forCodex) {
+      const result = installCodexAgent({ scope, force: !!opts.force, repoRoot });
+      const ok = printInstallResult(result, 'Codex CLI');
+      if (!ok) anyFailed = true;
+    }
+
     if (anyFailed) {
       process.exitCode = 1;
       return;
     }
 
     console.log('');
-    if (forCopilot && !forClaude) {
-      console.log('Next: launch Copilot CLI in this repo and run:');
-      console.log('  /agent          (then pick "buddy")');
-    } else if (forClaude && !forCopilot) {
-      console.log('Next: launch Claude Code in this repo and run:');
-      console.log('  @buddy  (or mention Buddy naturally in your prompt)');
+    const targets = [
+      forCopilot && 'Copilot CLI',
+      forClaude && 'Claude Code',
+      forCodex && 'Codex CLI',
+    ].filter(Boolean);
+
+    if (targets.length === 1) {
+      if (forCopilot) {
+        console.log('Next: launch Copilot CLI in this repo and run:');
+        console.log('  /agent          (then pick "buddy")');
+      } else if (forClaude) {
+        console.log('Next: launch Claude Code in this repo and run:');
+        console.log('  @buddy  (or mention Buddy naturally in your prompt)');
+      } else {
+        console.log('Next: launch Codex CLI in this repo — Buddy instructions are in AGENTS.md.');
+      }
     } else {
       console.log('Next steps:');
-      console.log('  Copilot CLI:  /agent  (then pick "buddy")');
-      console.log('  Claude Code:  @buddy  (or mention Buddy naturally in your prompt)');
+      if (forCopilot) console.log('  Copilot CLI:  /agent  (then pick "buddy")');
+      if (forClaude)  console.log('  Claude Code:  @buddy  (or mention Buddy naturally in your prompt)');
+      if (forCodex)   console.log('  Codex CLI:    launch codex — Buddy instructions are in AGENTS.md');
     }
     return;
   }
 
-  console.error(`buddy: unknown agent subcommand "${sub}". Use: install [--claude] [--all] [--user] [--force] | list | path`);
+  console.error(`buddy: unknown agent subcommand "${sub}". Use: install [--claude] [--codex] [--all] [--user] [--force] | list | path`);
   process.exit(1);
 }

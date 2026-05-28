@@ -5,7 +5,7 @@ import { copyTree } from '../lib/scaffold.js';
 import { readManifest, writeManifest, defaultManifest } from '../lib/manifest.js';
 import { hasGit, headCommit } from '../lib/git.js';
 import { openFile } from '../lib/opener.js';
-import { installAgent, installClaudeAgent } from './agent.js';
+import { installAgent, installClaudeAgent, installCodexAgent } from './agent.js';
 import { generateTourHtml } from './tour.js';
 import { writeFileSync } from 'node:fs';
 
@@ -62,6 +62,7 @@ export async function initCommand(opts) {
   console.log('Next steps:');
   console.log('  Copilot CLI:  /agent  →  pick "buddy"  →  "Scan this repo and fill in .buddy/"');
   console.log('  Claude Code:  @buddy  →  "Scan this repo and fill in .buddy/"');
+  console.log('  Codex CLI:    launch codex  →  Buddy instructions are in AGENTS.md');
 
   autoOpenHome(homePage, opts);
 }
@@ -96,6 +97,20 @@ function maybeInstallAgent(repoRoot, opts) {
     }
   } catch (err) {
     console.log(`! Could not install Claude Code agent: ${err.message}`);
+  }
+
+  // Install for Codex CLI
+  try {
+    const result = installCodexAgent({ scope, repoRoot });
+    if (result.action === 'already-installed') {
+      console.log(`✓ Codex CLI agent already installed at ${result.dest}`);
+    } else if (result.action === 'exists-different') {
+      console.log(`! Codex CLI agent at ${result.dest} differs — run "buddy agent install --codex --force" to update.`);
+    } else {
+      console.log(`🤝 Installed Codex CLI agent at ${result.dest}`);
+    }
+  } catch (err) {
+    console.log(`! Could not install Codex CLI agent: ${err.message}`);
   }
 }
 

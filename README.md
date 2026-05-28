@@ -5,12 +5,13 @@
 ![Node.js 18+](https://img.shields.io/badge/node-18%2B-43853d?logo=node.js&logoColor=white)
 ![Works with GitHub Copilot CLI](https://img.shields.io/badge/GitHub%20Copilot%20CLI-supported-2da44e?logo=github)
 ![Works with Claude Code](https://img.shields.io/badge/Claude%20Code-supported-d97706?logo=anthropic&logoColor=white)
+![Works with Codex CLI](https://img.shields.io/badge/Codex%20CLI-supported-412991?logo=openai&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows-supported-0078d4?logo=windows&logoColor=white)
 ![macOS](https://img.shields.io/badge/macOS-supported-000000?logo=apple&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-supported-fcc624?logo=linux&logoColor=black)
 
 > A friendly agent that helps newcomers understand any code repository.
-> Works with **GitHub Copilot CLI** and **Claude Code CLI**.
+> Works with **GitHub Copilot CLI**, **Claude Code CLI**, and **Codex CLI**.
 > Buddy stores all knowledge in a portable `.buddy/` folder at the repo root — pure Markdown + small JSON, no databases, no embeddings, no global state. Check it into git and your whole team benefits.
 
 ---
@@ -28,6 +29,7 @@ npm install -g @prustogi/buddy
 Requires **Node 18+**. You'll also want at least one of:
 - [GitHub Copilot CLI](https://github.com/github/gh-copilot) — `gh extension install github/gh-copilot`
 - [Claude Code CLI](https://claude.ai/code) — `npm install -g @anthropic-ai/claude-code`
+- [Codex CLI](https://github.com/openai/codex) — `npm install -g @openai/codex`
 
 Buddy is the *brain definition*; the AI CLI is the *runtime* that talks to it.
 
@@ -53,6 +55,13 @@ claude
 > @buddy scan this repo and fill in .buddy/
 ```
 
+**Codex CLI**
+```
+codex
+> scan this repo and fill in .buddy/
+```
+(Buddy instructions are pre-loaded via `AGENTS.md`)
+
 That's it. Buddy populates `.buddy/README_FOR_HUMANS.md`, `GETTING_STARTED.md`, `ARCHITECTURE.md`, and friends.
 
 ## Commands
@@ -66,7 +75,8 @@ That's it. Buddy populates `.buddy/README_FOR_HUMANS.md`, `GETTING_STARTED.md`, 
 | `buddy link <url>` | Save a doc URL with secret redaction. |
 | `buddy agent install` | Install the Buddy agent for Copilot CLI (default). |
 | `buddy agent install --claude` | Install for Claude Code CLI only. |
-| `buddy agent install --all` | Install for both Copilot CLI and Claude Code. |
+| `buddy agent install --codex` | Install for Codex CLI only. |
+| `buddy agent install --all` | Install for all CLIs (Copilot CLI, Claude Code, and Codex). |
 | `buddy agent list` | Show install status for all agent locations. |
 | `buddy agent path` | Print the source paths for both agent prompt files. |
 
@@ -80,6 +90,7 @@ Skip auto-open with `--no-open` or `BUDDY_NO_OPEN=1` (handy for CI).
 |---|---|---|
 | GitHub Copilot CLI | `.github/agents/buddy.md` | `~/.copilot/agents/buddy.md` |
 | Claude Code CLI | `.claude/agents/buddy.md` | `~/.claude/agents/buddy.md` |
+| Codex CLI | `AGENTS.md` | `~/.codex/AGENTS.md` |
 
 Use `buddy agent install --user` to install at user level instead of repo level.
 Use `buddy agent list` to see what is installed where.
