@@ -133,3 +133,7 @@ Tests use Node's built-in `node:test` runner — zero extra dependencies.
 ## License
 
 MIT — see [LICENSE](./LICENSE).
+
+---
+
+> **Disclaimer:** This is a personal project and is not affiliated with or endorsed by Microsoft.
