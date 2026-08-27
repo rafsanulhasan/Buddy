@@ -46,6 +46,10 @@ export function codexAgentPromptPath() {
   return join(packageRoot(), 'agents', 'buddy-codex.agent.md');
 }
 
+export function opencodeAgentPromptPath() {
+  return join(packageRoot(), 'agents', 'buddy-opencode.agent.md');
+}
+
 export function isDir(p) {
   try {
     return statSync(p).isDirectory();

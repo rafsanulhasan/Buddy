@@ -62,7 +62,8 @@ program
   .option('--force', 'Overwrite an existing buddy.md at the destination.')
   .option('--claude', 'Install for Claude Code only (.claude/agents/).')
   .option('--codex', 'Install for Codex CLI only (AGENTS.md).')
-  .option('--all', 'Install for all CLIs (Copilot CLI + Claude Code + Codex).')
+  .option('--opencode', 'Install for OpenCode only (.opencode/agent/).')
+  .option('--all', 'Install for all CLIs (Copilot CLI + Claude Code + Codex + OpenCode).')
   .action(agentCommand);
 
 program

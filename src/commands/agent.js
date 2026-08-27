@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, copyFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import { agentPromptPath, claudeAgentPromptPath, codexAgentPromptPath, findRepoRoot } from '../lib/paths.js';
+import { agentPromptPath, claudeAgentPromptPath, codexAgentPromptPath, opencodeAgentPromptPath, findRepoRoot } from '../lib/paths.js';
 
 // Install destinations auto-discovered by each CLI:
 //   Copilot CLI repo:  <repoRoot>/.github/agents/buddy.md
@@ -10,6 +10,8 @@ import { agentPromptPath, claudeAgentPromptPath, codexAgentPromptPath, findRepoR
 //   Claude Code user:  ~/.claude/agents/buddy.md
 //   Codex CLI repo:    <repoRoot>/AGENTS.md
 //   Codex CLI user:    ~/.codex/AGENTS.md
+//   OpenCode repo:     <repoRoot>/.opencode/agent/buddy.md
+//   OpenCode user:     ~/.config/opencode/agent/buddy.md
 
 function destForCopilot(scope, repoRoot) {
   if (scope === 'user') return join(homedir(), '.copilot', 'agents', 'buddy.md');
@@ -24,6 +26,11 @@ function destForClaude(scope, repoRoot) {
 function destForCodex(scope, repoRoot) {
   if (scope === 'user') return join(homedir(), '.codex', 'AGENTS.md');
   return join(repoRoot, 'AGENTS.md');
+}
+
+function destForOpencode(scope, repoRoot) {
+  if (scope === 'user') return join(homedir(), '.config', 'opencode', 'agent', 'buddy.md');
+  return join(repoRoot, '.opencode', 'agent', 'buddy.md');
 }
 
 function installTo(src, dest, force) {
@@ -63,6 +70,12 @@ export function installCodexAgent({ scope = 'repo', force = false, repoRoot } = 
   return installTo(codexAgentPromptPath(), dest, force);
 }
 
+export function installOpencodeAgent({ scope = 'repo', force = false, repoRoot } = {}) {
+  const root = repoRoot || findRepoRoot();
+  const dest = destForOpencode(scope, root);
+  return installTo(opencodeAgentPromptPath(), dest, force);
+}
+
 function printInstallResult(result, label) {
   if (result.action === 'already-installed') {
     console.log(`✓ ${label} agent already installed at ${result.dest}`);
@@ -86,6 +99,8 @@ function listAgents(repoRoot) {
     { label: 'Claude Code (user)', path: destForClaude('user', root) },
     { label: 'Codex CLI   (repo)', path: destForCodex('repo', root) },
     { label: 'Codex CLI   (user)', path: destForCodex('user', root) },
+    { label: 'OpenCode    (repo)', path: destForOpencode('repo', root) },
+    { label: 'OpenCode    (user)', path: destForOpencode('user', root) },
   ];
   console.log('Buddy agent locations:');
   for (const loc of locations) {
@@ -104,6 +119,7 @@ export async function agentCommand(subcommand, opts = {}) {
     console.log('Copilot CLI agent:', agentPromptPath());
     console.log('Claude Code agent:', claudeAgentPromptPath());
     console.log('Codex CLI agent:  ', codexAgentPromptPath());
+    console.log('OpenCode agent:   ', opencodeAgentPromptPath());
     return;
   }
 
@@ -116,7 +132,8 @@ export async function agentCommand(subcommand, opts = {}) {
     const forAll = opts.all;
     const forClaude = opts.claude || forAll;
     const forCodex = opts.codex || forAll;
-    const forCopilot = (!opts.claude && !opts.codex) || forAll;
+    const forOpencode = opts.opencode || forAll;
+    const forCopilot = (!opts.claude && !opts.codex && !opts.opencode) || forAll;
     let anyFailed = false;
 
     if (forCopilot) {
@@ -137,6 +154,12 @@ export async function agentCommand(subcommand, opts = {}) {
       if (!ok) anyFailed = true;
     }
 
+    if (forOpencode) {
+      const result = installOpencodeAgent({ scope, force: !!opts.force, repoRoot });
+      const ok = printInstallResult(result, 'OpenCode');
+      if (!ok) anyFailed = true;
+    }
+
     if (anyFailed) {
       process.exitCode = 1;
       return;
@@ -147,6 +170,7 @@ export async function agentCommand(subcommand, opts = {}) {
       forCopilot && 'Copilot CLI',
       forClaude && 'Claude Code',
       forCodex && 'Codex CLI',
+      forOpencode && 'OpenCode',
     ].filter(Boolean);
 
     if (targets.length === 1) {
@@ -156,18 +180,21 @@ export async function agentCommand(subcommand, opts = {}) {
       } else if (forClaude) {
         console.log('Next: launch Claude Code in this repo and run:');
         console.log('  @buddy  (or mention Buddy naturally in your prompt)');
-      } else {
+      } else if (forCodex) {
         console.log('Next: launch Codex CLI in this repo — Buddy instructions are in AGENTS.md.');
+      } else {
+        console.log('Next: launch opencode in this repo and press Tab (or use --agent buddy) to switch to Buddy.');
       }
     } else {
       console.log('Next steps:');
       if (forCopilot) console.log('  Copilot CLI:  /agent  (then pick "buddy")');
       if (forClaude)  console.log('  Claude Code:  @buddy  (or mention Buddy naturally in your prompt)');
       if (forCodex)   console.log('  Codex CLI:    launch codex — Buddy instructions are in AGENTS.md');
+      if (forOpencode) console.log('  OpenCode:     launch opencode — press Tab to switch to the "buddy" agent');
     }
     return;
   }
 
-  console.error(`buddy: unknown agent subcommand "${sub}". Use: install [--claude] [--codex] [--all] [--user] [--force] | list | path`);
+  console.error(`buddy: unknown agent subcommand "${sub}". Use: install [--claude] [--codex] [--opencode] [--all] [--user] [--force] | list | path`);
   process.exit(1);
 }
